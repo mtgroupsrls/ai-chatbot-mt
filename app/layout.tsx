@@ -5,11 +5,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
+import { appConfig } from "@/lib/config";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chat.vercel.ai"),
-  title: "Next.js Chatbot Template",
-  description: "Next.js chatbot template using the AI SDK.",
+  metadataBase: new URL(appConfig.url),
+  title: appConfig.name,
+  description: appConfig.description,
 };
 
 export const viewport = {

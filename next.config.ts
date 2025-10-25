@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
         hostname: "avatar.vercel.sh",
       },
     ],
+    // Allow local images served through our API
+    domains: ["localhost"],
   },
 };
 

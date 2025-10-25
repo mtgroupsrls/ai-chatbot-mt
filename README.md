@@ -24,27 +24,73 @@
 - [AI SDK](https://ai-sdk.dev/docs/introduction)
   - Unified API for generating text, structured objects, and tool calls with LLMs
   - Hooks for building dynamic chat and generative user interfaces
-  - Supports xAI (default), OpenAI, Fireworks, and other model providers
+  - Supports Azure OpenAI (default), OpenAI, Anthropic, and other model providers
 - [shadcn/ui](https://ui.shadcn.com)
   - Styling with [Tailwind CSS](https://tailwindcss.com)
   - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
 - Data Persistence
-  - [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for saving chat history and user data
-  - [Vercel Blob](https://vercel.com/storage/blob) for efficient file storage
+  - [PostgreSQL](https://www.postgresql.org/) for saving chat history and user data
+  - Local file storage for uploaded files (behind authentication layer)
 - [Auth.js](https://authjs.dev)
   - Simple and secure authentication
 
 ## Model Providers
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. The default configuration includes [xAI](https://x.ai) models (`grok-2-vision-1212`, `grok-3-mini`) routed through the gateway.
+This template uses [Azure OpenAI](https://azure.microsoft.com/en-us/products/ai-services/openai-service) through the [Vercel AI SDK Azure provider](https://sdk.vercel.ai/providers/ai-sdk-providers/azure). The default configuration uses GPT-4o models.
 
-### AI Gateway Authentication
+### Azure OpenAI Setup
 
-**For Vercel deployments**: Authentication is handled automatically via OIDC tokens.
+You'll need to set up an Azure OpenAI resource and configure the following environment variables in your `.env.local` file:
 
-**For non-Vercel deployments**: You need to provide an AI Gateway API key by setting the `AI_GATEWAY_API_KEY` environment variable in your `.env.local` file.
+- `AZURE_RESOURCE_NAME`: Your Azure OpenAI resource name
+- `AZURE_API_KEY`: Your Azure OpenAI API key
+- `AZURE_DEPLOYMENT_NAME`: Your GPT-4o deployment name (optional, defaults to `gpt-4o`)
+- `AZURE_DEPLOYMENT_NAME_REASONING`: Your reasoning model deployment name (optional, defaults to `gpt-4o`)
+- `AZURE_DEPLOYMENT_NAME_TITLE`: Your title generation model deployment name (optional, defaults to `gpt-4o-mini`)
+- `AZURE_DEPLOYMENT_NAME_ARTIFACT`: Your artifact model deployment name (optional, defaults to `gpt-4o`)
 
-With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
+With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to other LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
+
+## Database Setup
+
+This template uses PostgreSQL for data persistence. You'll need to set up a PostgreSQL database and configure the connection string.
+
+### PostgreSQL Setup
+
+1. **Install PostgreSQL** (if running locally):
+
+   - Download from [postgresql.org](https://www.postgresql.org/download/)
+   - Or use Docker: `docker run --name postgres -e POSTGRES_PASSWORD=yourpassword -p 5432:5432 -d postgres`
+
+2. **Create a database**:
+
+   ```sql
+   CREATE DATABASE chatbot_db;
+   ```
+
+3. **Configure the connection string** in your `.env.local` file:
+
+   ```env
+   POSTGRES_URL=postgresql://username:password@localhost:5432/chatbot_db
+   ```
+
+4. **Run migrations**:
+   ```bash
+   pnpm db:migrate
+   ```
+
+### Connection String Format
+
+The `POSTGRES_URL` should follow this format:
+
+```
+postgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
+```
+
+**Examples:**
+
+- Local: `postgresql://postgres:password@localhost:5432/chatbot_db`
+- Remote: `postgresql://user:pass@db.example.com:5432/chatbot_db?sslmode=require`
 
 ## Deploy Your Own
 

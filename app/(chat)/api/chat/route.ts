@@ -1,3 +1,5 @@
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
@@ -82,6 +84,62 @@ export function getStreamContext() {
   }
 
   return globalStreamContext;
+}
+
+/**
+ * Convert local file URLs to base64 data URLs so the AI model can access them
+ */
+async function convertLocalFilesToBase64(messages: ChatMessage[]): Promise<ChatMessage[]> {
+  return Promise.all(
+    messages.map(async (message) => {
+      if (message.role !== "user" || !message.parts) {
+        return message;
+      }
+
+      const convertedParts = await Promise.all(
+        message.parts.map(async (part) => {
+          // Check if this is a file part with a local URL
+          if (
+            part.type === "file" &&
+            typeof part.url === "string" &&
+            part.url.startsWith("/api/files/")
+          ) {
+            try {
+              // Extract filename from URL
+              const filename = part.url.replace("/api/files/", "");
+
+              // Prevent directory traversal
+              if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+                console.error("Invalid filename in file URL:", filename);
+                return part;
+              }
+
+              // Read file from disk
+              const filepath = join(process.cwd(), "uploads", filename);
+              const fileBuffer = await readFile(filepath);
+              const base64 = fileBuffer.toString("base64");
+
+              // Return file part with base64 data URL
+              return {
+                ...part,
+                url: `data:${part.mediaType};base64,${base64}`,
+              };
+            } catch (error) {
+              console.error("Failed to convert local file to base64:", error);
+              return part;
+            }
+          }
+
+          return part;
+        })
+      );
+
+      return {
+        ...message,
+        parts: convertedParts,
+      };
+    })
+  );
 }
 
 export async function POST(request: Request) {
@@ -173,12 +231,15 @@ export async function POST(request: Request) {
 
     let finalMergedUsage: AppUsage | undefined;
 
+    // Convert local file URLs to base64 data URLs so AI can access them
+    const messagesWithBase64Files = await convertLocalFilesToBase64(uiMessages);
+
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: convertToModelMessages(uiMessages),
+          messages: convertToModelMessages(messagesWithBase64Files),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === "chat-model-reasoning"
@@ -290,16 +351,6 @@ export async function POST(request: Request) {
 
     if (error instanceof ChatSDKError) {
       return error.toResponse();
-    }
-
-    // Check for Vercel AI Gateway credit card error
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
 
     console.error("Unhandled error in chat API:", error, { vercelId });

@@ -17,14 +17,17 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import { saveChatModelAsCookie } from "@/app/(chat)/actions";
 import { SelectItem } from "@/components/ui/select";
-import { chatModels } from "@/lib/ai/models";
+import type { ChatModel } from "@/lib/ai/models";
 import { myProvider } from "@/lib/ai/providers";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { cn } from "@/lib/utils";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 import { Context } from "./elements/context";
 import {
   PromptInput,
@@ -403,6 +406,7 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [optimisticModelId, setOptimisticModelId] = useState(selectedModelId);
+  const { data: chatModels = [] } = useSWR<ChatModel[]>("/api/models", fetcher);
 
   useEffect(() => {
     setOptimisticModelId(selectedModelId);

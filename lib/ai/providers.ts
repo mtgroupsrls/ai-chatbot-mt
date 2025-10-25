@@ -1,10 +1,15 @@
-import { gateway } from "@ai-sdk/gateway";
+import { createAzure } from "@ai-sdk/azure";
 import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";
+
+const azure = createAzure({
+  resourceName: process.env.AZURE_RESOURCE_NAME,
+  apiKey: process.env.AZURE_API_KEY,
+});
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -25,12 +30,12 @@ export const myProvider = isTestEnvironment
     })()
   : customProvider({
       languageModels: {
-        "chat-model": gateway.languageModel("xai/grok-2-vision-1212"),
+        "chat-model": azure(process.env.AZURE_DEPLOYMENT_NAME || "gpt-4o"),
         "chat-model-reasoning": wrapLanguageModel({
-          model: gateway.languageModel("xai/grok-3-mini"),
+          model: azure(process.env.AZURE_DEPLOYMENT_NAME_REASONING || "gpt-4o"),
           middleware: extractReasoningMiddleware({ tagName: "think" }),
         }),
-        "title-model": gateway.languageModel("xai/grok-2-1212"),
-        "artifact-model": gateway.languageModel("xai/grok-2-1212"),
+        "title-model": azure(process.env.AZURE_DEPLOYMENT_NAME_TITLE || "gpt-4o-mini"),
+        "artifact-model": azure(process.env.AZURE_DEPLOYMENT_NAME_ARTIFACT || "gpt-4o"),
       },
     });

@@ -2,6 +2,7 @@
 
 import type { Session } from "next-auth";
 import { startTransition, useMemo, useOptimistic, useState } from "react";
+import useSWR from "swr";
 import { saveChatModelAsCookie } from "@/app/(chat)/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import { chatModels } from "@/lib/ai/models";
+import type { ChatModel } from "@/lib/ai/models";
 import { cn } from "@/lib/utils";
 import { CheckCircleFillIcon, ChevronDownIcon } from "./icons";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function ModelSelector({
   session,
@@ -26,6 +29,8 @@ export function ModelSelector({
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
+
+  const { data: chatModels = [] } = useSWR<ChatModel[]>("/api/models", fetcher);
 
   const userType = session.user.type;
   const { availableChatModelIds } = entitlementsByUserType[userType];

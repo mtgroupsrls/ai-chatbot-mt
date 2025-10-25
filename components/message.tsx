@@ -138,7 +138,9 @@ const PurePreviewMessage = ({
                           : undefined
                       }
                     >
-                      <Response>{sanitizeText(part.text)}</Response>
+                      <Response preserveLineBreaks={message.role === "user"}>
+                        {sanitizeText(part.text)}
+                      </Response>
                     </MessageContent>
                   </div>
                 );

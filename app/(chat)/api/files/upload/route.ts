@@ -1,7 +1,7 @@
-import { put } from "@vercel/blob";
+import { writeFile, mkdir } from "fs/promises";
 import { NextResponse } from "next/server";
+import { join } from "path";
 import { z } from "zod";
-
 import { auth } from "@/app/(auth)/auth";
 
 // Use Blob instead of File since File is not available in Node.js environment
@@ -51,9 +51,27 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: "public",
-      });
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = join(process.cwd(), "uploads");
+      await mkdir(uploadsDir, { recursive: true });
+
+      // Sanitize filename: replace spaces and special characters with underscores
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+
+      // Generate unique filename to prevent collisions
+      const timestamp = Date.now();
+      const uniqueFilename = `${timestamp}-${sanitizedFilename}`;
+      const filepath = join(uploadsDir, uniqueFilename);
+
+      // Write file to disk
+      await writeFile(filepath, Buffer.from(fileBuffer));
+
+      // Return response matching Vercel Blob format
+      const data = {
+        url: `/api/files/${uniqueFilename}`,
+        pathname: uniqueFilename,
+        contentType: file.type,
+      };
 
       return NextResponse.json(data);
     } catch (_error) {
